@@ -8,14 +8,13 @@ export type User = { id_users:number; name_users:string; email:string; state:num
 @Injectable({ providedIn: 'root' })
 export class UsersService {
   private http = inject(HttpClient);
-  private base = `${environment.apiUrl}/users`; // /api/users
+  private base = `${environment.apiUrl}/users`;
 
   list() { return this.http.get<User[]>(this.base); }
   create(data: {name_users:string; email:string; password:string}) { return this.http.post<User>(this.base, data); }
   update(id:number, data: Partial<User>) { return this.http.put<User>(`${this.base}/${id}`, data); }
   remove(id:number) { return this.http.delete(`${this.base}/${id}`); }
 
-  // gestionar roles (admin)
   rolesOf(userId:number){ return this.http.get<string[]>(`${this.base}/${userId}/roles`); }
   setRoles(userId:number, roles:string[]){ return this.http.put(`${this.base}/${userId}/roles`, { roles }); }
 }

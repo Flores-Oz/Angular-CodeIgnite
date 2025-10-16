@@ -14,7 +14,7 @@ import { CommonModule } from '@angular/common';
         <div class="font-semibold">Panel</div>
         <nav class="flex items-center gap-4">
           <a routerLink="/dashboard" class="text-sm text-gray-700 hover:text-indigo-600">Inicio</a>
-          <a routerLink="/users" class="text-sm text-gray-700 hover:text-indigo-600">Usuarios</a>
+          <a *ngIf="isAdmin()" routerLink="/users" class="text-sm text-gray-700 hover:text-indigo-600">Usuarios</a>
           <a routerLink="/content" class="text-sm text-gray-700 hover:text-indigo-600">Contenido</a>
           <a *ngIf="isAdmin()" routerLink="/admin" class="text-sm text-gray-700 hover:text-indigo-600">Administración</a>
           <span class="text-sm text-gray-500"> {{ email() }} </span>

@@ -7,6 +7,7 @@ import { AuthService } from '../../app/core/auth.service';
 @Component({
   standalone: true,
   imports: [CommonModule, FormsModule],
+  selector: 'app-users',
   template: `
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-xl font-semibold">Usuarios</h2>
@@ -43,7 +44,7 @@ import { AuthService } from '../../app/core/auth.service';
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let u of users()" class="border-t">
+        <tr *ngFor="let u of users(); trackBy: trackById" class="border-t">
           <td class="p-3">{{ u.name_users }}</td>
           <td class="p-3">{{ u.email }}</td>
           <td class="p-3">
@@ -74,12 +75,21 @@ export class UsersComponent {
   ngOnInit(){ this.load(); }
   load(){ this.api.list().subscribe({ next: d => this.users.set(d) }); }
   toggleCreate(){ this.showCreate.set(!this.showCreate()); }
-  canCreate(){ return true; } // para todos los logueados; si quieres filtrar por permiso, ajusta
+
+  // Si quieres que solo ADMIN cree:
+  canCreate(){ return this.auth.hasRole?.('ADMIN') ?? true; }
 
   create(){
     this.api.create(this.draft).subscribe({
-      next: _ => { this.draft = {name_users:'', email:'', password:''}; this.showCreate.set(false); this.load(); },
+      next: _ => {
+        this.draft = {name_users:'', email:'', password:''};
+        this.showCreate.set(false);
+        this.load();
+        this.error.set(undefined);
+      },
       error: e => this.error.set(e?.error?.message ?? 'Error al crear')
     });
   }
+
+  trackById = (_: number, u: User) => u.id_users;
 }

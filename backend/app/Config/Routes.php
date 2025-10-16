@@ -2,28 +2,50 @@
 
 use CodeIgniter\Router\RouteCollection;
 
-$routes->group('api', ['namespace' => 'App\Controllers\Api'/*, 'filter'=>'cors'*/], static function($routes) {
-  $routes->post('auth/login', 'AuthController::login');
-  $routes->group('auth', ['filter'=>'jwt'], static function($routes){
-    $routes->get('me', 'AuthController::me');
-  });
+/** @var RouteCollection $routes */
 
-  // CRUD usuarios (protegido)
-  $routes->group('users', ['filter'=>'jwt'], static function($routes){
-    $routes->get('/', 'UserController::index');
-    $routes->post('/', 'UserController::create');
-    $routes->put('(:num)', 'UserController::update/$1');
-    $routes->delete('(:num)', 'UserController::delete/$1');
+// Recomendado:
+$routes->setAutoRoute(false);
+// $routes->setDefaultNamespace('App\Controllers'); // opcional
 
-    // roles
-    $routes->get('(:num)/roles', 'UserController::roles/$1');
-    $routes->put('(:num)/roles', 'UserController::setRoles/$1'); // body: { roles: ["admin","user"] }
-  });
-});
+$routes->group('api', ['namespace' => 'App\Controllers\Api'/*, 'filter' => 'cors'*/], static function ($routes) {
 
-$routes->group('api', ['namespace' => 'App\Controllers\Api'], static function($routes) {
-    // Protegidas con JWT (puedes agregar 'cors' si lo usas)
-    $routes->get('posts',        'PostController::index', ['filter' => 'jwt']);
-    $routes->get('posts/mine',   'PostController::mine',  ['filter' => 'jwt']);
-    $routes->post('posts',       'PostController::create',['filter' => 'jwt']);
+    // ---------- AUTH ----------
+    $routes->post('auth/login', 'AuthController::login');
+    $routes->group('auth', ['filter' => 'jwt'], static function ($routes) {
+        $routes->get('me', 'AuthController::me');
+    });
+
+    // (Opcional) Preflight CORS para /api/auth/*
+    $routes->options('auth/(:any)', 'Cors::preflight'); // si usas un controlador/filtro CORS
+
+    // ---------- USERS (CRUD + roles) ----------
+    $routes->group('users', ['filter' => 'jwt'], static function ($routes) {
+        // OJO: '' y no '/'
+        $routes->get('',  'UserController::index');   // GET /api/users
+        $routes->post('', 'UserController::create');  // POST /api/users
+
+        $routes->put('(:num)',    'UserController::update/$1'); // PUT /api/users/123
+        $routes->delete('(:num)', 'UserController::delete/$1'); // DELETE /api/users/123
+
+        // Roles
+        $routes->get('(:num)/roles', 'UserController::roles/$1');     // GET /api/users/123/roles
+        $routes->put('(:num)/roles', 'UserController::setRoles/$1');  // PUT /api/users/123/roles
+
+        // (Opcional) Preflight CORS para /api/users/*
+        $routes->options('(:any)', 'Cors::preflight');
+    });
+
+    // ---------- POSTS ----------
+    $routes->group('posts', ['filter' => 'jwt'], static function ($routes) {
+        $routes->get('',      'PostController::index');  // GET /api/posts
+        $routes->get('mine',  'PostController::mine');   // GET /api/posts/mine
+        $routes->post('',     'PostController::create'); // POST /api/posts
+
+        // (si luego agregas update/delete)
+        $routes->put('(:num)', 'PostController::update/$1');
+        $routes->delete('(:num)', 'PostController::delete/$1');
+
+        $routes->options('(:any)', 'Cors::preflight'); // preflight
+    });
 });
