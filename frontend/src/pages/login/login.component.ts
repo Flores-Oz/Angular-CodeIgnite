@@ -27,8 +27,8 @@ export class LoginComponent {
     this.error.set(null);
 
     this.auth.login(this.email, this.password).subscribe({
-      next: ({ token }) => {
-        this.auth.saveToken(token);
+      next: (resp) => {
+        this.auth.saveTokenFromLogin(resp);   // guarda resp.access_token
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {

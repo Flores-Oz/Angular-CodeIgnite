@@ -2,18 +2,18 @@
 
 use CodeIgniter\Router\RouteCollection;
 
-/**
- * @var RouteCollection $routes
- */
-$routes->get('/', 'Home::index');
-$routes->group('api', ['filter' => 'cors,jwt'], static function($routes) {
-    $routes->resource('users', ['controller' => 'Api\UserController']);
-});
+$routes->group('api', ['namespace' => 'App\Controllers\Api' /*, 'filter' => 'cors'*/], static function($routes) {
 
-$routes->group('api', ['filter' => 'cors,jwt'], static function($routes) {
-    $routes->presenter('users', [
-        'controller' => 'Api\UserPresenter',
-        // Aplica rol admin a todo el recurso (opcional)
-        'filter'     => 'role:admin'
-    ]);
+    // público
+    $routes->post('auth/login', 'AuthController::login');
+
+    // protegidas con JWT
+    $routes->group('auth', ['filter' => 'jwt'], static function($routes) {
+        $routes->get('me', 'AuthController::me'); // /api/auth/me
+    });
+
+    // ejemplo protegido (REST users)
+    // $routes->group('', ['filter' => 'jwt'], static function($routes) {
+    //     $routes->resource('users', ['controller' => 'UserController']);
+    // });
 });

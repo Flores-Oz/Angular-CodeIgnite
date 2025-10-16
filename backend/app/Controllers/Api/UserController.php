@@ -17,8 +17,8 @@ class UserController extends ResourceController
      */
     public function index()
     {
-        $users = $this->model->select('id_users, name_users, email, estado, created_at')
-                             ->where('estado', 1)
+        $users = $this->model->select('id_users, name_users, email, state, created_at')
+                             ->where('state', 1)
                              ->findAll();
         return $this->respond($users);
     }
@@ -66,7 +66,7 @@ class UserController extends ResourceController
 
         $data['password_hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
         unset($data['password']);
-        $data['estado'] = 1;
+        $data['state'] = 1;
 
         $this->model->insert($data);
         return $this->respondCreated(['message' => 'Usuario creado correctamente']);
@@ -120,7 +120,7 @@ class UserController extends ResourceController
         if (!$id) return $this->failValidationError('ID requerido');
         if (!$this->model->find($id)) return $this->failNotFound('Usuario no encontrado');
 
-        $this->model->update($id, ['estado' => 0]); // desactivar en lugar de borrar
+        $this->model->update($id, ['state' => 0]); // desactivar en lugar de borrar
         return $this->respondDeleted(['message' => 'Usuario eliminado (inactivado)']);
     }
 }

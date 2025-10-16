@@ -14,47 +14,43 @@ class AuthController extends BaseController
      * POST /api/auth/login
      * Body JSON: { "email": "...", "password": "..." }
      */
-    public function login(): ResponseInterface
+ public function login(): ResponseInterface
     {
-        // 1) Entrada
         $data  = $this->request->getJSON(true) ?? [];
         $email = trim($data['email'] ?? '');
         $pass  = (string)($data['password'] ?? '');
 
         if ($email === '' || $pass === '') {
-            return $this->response
-                ->setStatusCode(422)
-                ->setJSON(['message' => 'Email y password son requeridos.']);
+            return $this->response->setStatusCode(422)->setJSON(['message' => 'Email y password son requeridos.']);
         }
 
-        // 2) Usuario (activo)
+        // users(id_users, name_users, email, password_hash, state)
         $userM = new UserModel();
         $user  = $userM->where('email', $email)
-                       ->where('estado', 1)
+                       ->where('state', 1)        // ← tu columna real
                        ->first();
 
         // Evitar revelar si el email existe o no
-        if (!$user || !password_verify($pass, $user['password_hash'])) {
-            return $this->response
-                ->setStatusCode(401)
-                ->setJSON(['message' => 'Credenciales inválidas.']);
+        if (!$user || !password_verify($pass, $user['password_hash'] ?? '')) {
+            return $this->response->setStatusCode(401)->setJSON(['message' => 'Credenciales inválidas.']);
         }
 
-        // 3) Roles activos del usuario (via pivote)
+        // roles asociados via user_role (user_id, role_id, state) → roles(id_roles, name_roles, state)
         $db = Database::connect();
         $rolesRows = $db->table('user_role AS ur')
             ->select('r.name_roles')
             ->join('roles AS r', 'r.id_roles = ur.role_id')
             ->where('ur.user_id', $user['id_users'])
-            ->where('ur.estado', 1)
-            ->where('r.estado', 1)
+            ->where('ur.state', 1)
+            ->where('r.state', 1)
             ->get()
             ->getResultArray();
 
         $roles = array_map(static fn ($r) => $r['name_roles'], $rolesRows);
+        if (!$roles) { $roles = ['user']; } // fallback si no hay relación (en tu dump sí hay 'admin')
 
-        // 4) Emitir JWT
-        $ttl = (int)(getenv('JWT_TTL') ?: 3600); // segs (1h por defecto)
+        // Emitir JWT
+        $ttl = (int)(getenv('JWT_TTL') ?: 3600);
         $jwt = new JwtService();
         $token = $jwt->create([
             'uid'   => (int)$user['id_users'],
@@ -62,8 +58,7 @@ class AuthController extends BaseController
             'roles' => $roles,
         ], $ttl);
 
-        // 5) Respuesta estándar
-        return $this->response->setStatusCode(200)->setJSON([
+        return $this->response->setJSON([
             'access_token' => $token,
             'token_type'   => 'Bearer',
             'expires_in'   => $ttl,
@@ -76,21 +71,12 @@ class AuthController extends BaseController
         ]);
     }
 
-    /**
-     * GET /api/auth/me
-     * Protegida con JwtFilter (y opcional RoleFilter)
-     */
     public function me(): ResponseInterface
     {
         $payload = $this->request->user ?? null;
         if (!$payload) {
             return $this->response->setStatusCode(401)->setJSON(['message' => 'Unauthorized']);
         }
-
-        // Puedes mapear payload → user minimal
-        return $this->response->setStatusCode(200)->setJSON([
-            'user' => $payload,
-        ]);
+        return $this->response->setJSON(['user' => $payload]);
     }
 }
-
