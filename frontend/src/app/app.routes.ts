@@ -11,7 +11,8 @@ export const routes: Routes = [
       { path: 'dashboard', loadComponent: () => import('../pages/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'users', loadComponent: () => import('../pages/users/users.component').then(m => m.UsersComponent) },
       { path: 'admin', canActivate: [roleGuard('admin')], loadComponent: () => import('../pages/admin/admin.component').then(m => m.AdminComponent) },
-      { path: '', pathMatch: 'full', redirectTo: 'dashboard' }
+      { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+      { path: 'content', loadComponent: () => import('../pages/content/content.component').then(m => m.ContentComponent) }
   ]},
 
   { path: '**', redirectTo: '' }

@@ -20,3 +20,10 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'/*, 'filter'=>'cors'*
     $routes->put('(:num)/roles', 'UserController::setRoles/$1'); // body: { roles: ["admin","user"] }
   });
 });
+
+$routes->group('api', ['namespace' => 'App\Controllers\Api'], static function($routes) {
+    // Protegidas con JWT (puedes agregar 'cors' si lo usas)
+    $routes->get('posts',        'PostController::index', ['filter' => 'jwt']);
+    $routes->get('posts/mine',   'PostController::mine',  ['filter' => 'jwt']);
+    $routes->post('posts',       'PostController::create',['filter' => 'jwt']);
+});
