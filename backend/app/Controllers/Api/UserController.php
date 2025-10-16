@@ -8,119 +8,76 @@ use CodeIgniter\RESTful\ResourceController;
 
 class UserController extends ResourceController
 {
-    protected $modelName = UserModel::class;
-    protected $format    = 'json';
-    /**
-     * Return an array of resource objects, themselves in array format.
-     *
-     * @return ResponseInterface
-     */
-    public function index()
-    {
-        $users = $this->model->select('id_users, name_users, email, state, created_at')
-                             ->where('state', 1)
-                             ->findAll();
-        return $this->respond($users);
+    public function index(){
+        $m = new UserModel();
+        return $this->response->setJSON($m->select('id_users,name_users,email,state')->findAll());
     }
 
-    /**
-     * Return the properties of a resource object.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function show($id = null)
-    {
-        $user = $this->model->find($id);
-        if (!$user) {
-            return $this->failNotFound('Usuario no encontrado');
-        }
-        return $this->respond($user);
-    }
-
-    /**
-     * Return a new resource object, with default properties.
-     *
-     * @return ResponseInterface
-     */
-    public function new()
-    {
-       
-    }
-
-    /**
-     * Create a new resource object, from "posted" parameters.
-     *
-     * @return ResponseInterface
-     */
-    public function create()
-    {
+    public function create(){
         $data = $this->request->getJSON(true);
-        if (!$data) return $this->failValidationError('Datos inválidos');
+        if (!($data['name_users']??null) || !($data['email']??null) || !($data['password']??null))
+            return $this->fail('Datos incompletos', 422);
 
-        // Ejemplo simple de validación manual
-        if (empty($data['name_users']) || empty($data['email']) || empty($data['password'])) {
-            return $this->failValidationError('Nombre, email y password son requeridos');
-        }
-
-        $data['password_hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
-        unset($data['password']);
-        $data['state'] = 1;
-
-        $this->model->insert($data);
-        return $this->respondCreated(['message' => 'Usuario creado correctamente']);
+        $m = new UserModel();
+        $ok = $m->insert([
+            'name_users'    => $data['name_users'],
+            'email'         => $data['email'],
+            'password_hash' => password_hash($data['password'], PASSWORD_BCRYPT),
+            'state'         => 1,
+            'created_at'    => date('Y-m-d H:i:s'),
+            'updated_at'    => date('Y-m-d H:i:s'),
+        ]);
+        if (!$ok) return $this->fail('No se pudo crear', 400);
+        return $this->response->setJSON($m->select('id_users,name_users,email,state')->find($m->getInsertID()));
     }
 
-    /**
-     * Return the editable properties of a resource object.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function edit($id = null)
-    {
-        //
-    }
-
-    /**
-     * Add or update a model resource, from "posted" properties.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function update($id = null)
-    {
+    public function update($id){
         $data = $this->request->getJSON(true);
-        if (!$id || !$data) return $this->failValidationError('Datos inválidos');
-
-        if (isset($data['password']) && $data['password'] !== '') {
-            $data['password_hash'] = password_hash($data['password'], PASSWORD_DEFAULT);
-            unset($data['password']);
-        }
-
-        if (!$this->model->update($id, $data)) {
-            return $this->fail('No se pudo actualizar el usuario');
-        }
-
-        return $this->respond(['message' => 'Usuario actualizado']);
+        $m = new UserModel();
+        $save = array_intersect_key($data, array_flip(['name_users','email','state']));
+        $save['updated_at'] = date('Y-m-d H:i:s');
+        if (!$m->update($id, $save)) return $this->fail('No se pudo actualizar', 400);
+        return $this->response->setJSON($m->select('id_users,name_users,email,state')->find($id));
     }
 
-    /**
-     * Delete the designated resource object from the model.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function delete($id = null)
-    {
-        if (!$id) return $this->failValidationError('ID requerido');
-        if (!$this->model->find($id)) return $this->failNotFound('Usuario no encontrado');
-
-        $this->model->update($id, ['state' => 0]); // desactivar en lugar de borrar
-        return $this->respondDeleted(['message' => 'Usuario eliminado (inactivado)']);
+    public function delete($id){
+        $m = new UserModel();
+        if (!$m->delete($id)) return $this->fail('No se pudo eliminar', 400);
+        return $this->response->setJSON(['ok'=>true]);
     }
+
+    public function roles($id){
+        $db = Database::connect();
+        $rows = $db->table('user_role ur')
+            ->select('r.name_roles')
+            ->join('roles r','r.id_roles=ur.role_id')
+            ->where('ur.user_id',$id)->where('ur.state',1)->where('r.state',1)->get()->getResultArray();
+        return $this->response->setJSON(array_map(fn($r)=>$r['name_roles'],$rows));
+    }
+
+    public function setRoles($id){
+        $data = $this->request->getJSON(true);
+        $roles = $data['roles'] ?? [];
+        $db = Database::connect();
+
+        // desactivar actuales
+        $db->table('user_role')->where('user_id',$id)->update(['state'=>0,'updated_at'=>date('Y-m-d H:i:s')]);
+
+        // activar los enviados
+        if ($roles) {
+            $roleIds = $db->table('roles')->select('id_roles,name_roles')->whereIn('name_roles',$roles)->get()->getResultArray();
+            foreach($roleIds as $r){
+                $db->table('user_role')->replace([
+                    'user_id' => $id,
+                    'role_id' => $r['id_roles'],
+                    'state'   => 1,
+                    'created_at'=>date('Y-m-d H:i:s'),
+                    'updated_at'=>date('Y-m-d H:i:s'),
+                ]);
+            }
+        }
+        return $this->response->setJSON(['ok'=>true]);
+    }
+
+    private function fail($msg, $code){ return $this->response->setStatusCode($code)->setJSON(['message'=>$msg]); }
 }
