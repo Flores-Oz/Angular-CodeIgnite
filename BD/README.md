@@ -119,7 +119,7 @@ Este esquema implementa **usuarios, roles, permisos y publicaciones**, con sopor
 ---
 
 ## 🧭 Relaciones
-![Texto alternativo](RELACIONES.png)
+![Texto alternativo](RELACION.png)
 - `state` permite activar/desactivar sin eliminar.  
 - `ON DELETE CASCADE` limpia vínculos y posts al borrar físicamente usuarios o roles.
 
