@@ -11,7 +11,7 @@ export const routes: Routes = [
     component: ShellComponent,
     canActivate: [authGuard],
     children: [
-      { path: 'dashboard', loadComponent: () => import('../pages/dashboard/dashboard.component').then(m => m.AdminDashboardComponent) },
+      { path: 'dashboard', loadComponent: () => import('../pages/dashboard/dashboard.component').then(m => m.DashboardComponent) },
       { path: 'content',   loadComponent: () => import('../pages/content/content.component').then(m => m.ContentComponent) },
 
       // ====== ADMIN con subrutas ======
