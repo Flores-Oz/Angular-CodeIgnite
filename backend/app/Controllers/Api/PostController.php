@@ -8,54 +8,68 @@ use App\Models\PostModel;
 
 class PostController extends ResourceController
 {
-    /**
-     * Return an array of resource objects, themselves in array format.
-     *
-     * @return ResponseInterface
-     */
-    public function index()
+   protected $format = 'json';
+
+    /* ------------ helpers de auth/roles ------------ */
+
+    private function user(): array {
+        // Asegúrate que tu JwtFilter ponga: $request->user = ['uid'=>..,'roles'=>['ADMIN',...], ...]
+        return $this->request->user ?? [];
+    }
+
+    private function userId(): ?int {
+        $u = $this->user();
+        // soporta uid o id, por si tu filtro usa otro nombre
+        return $u['uid'] ?? ($u['id'] ?? null);
+    }
+
+    private function isAdmin(): bool {
+        $roles = $this->user()['roles'] ?? [];
+        // normaliza y busca 'ADMIN'
+        $upper = array_map('strtoupper', is_array($roles) ? $roles : []);
+        return in_array('ADMIN', $upper, true);
+    }
+
+    /* -------------------- LISTAR -------------------- */
+    public function index(): ResponseInterface
     {
-         $m = new PostModel();
-        // Todos los posts activos; si quieres paginar, añade limit/offset
-        $rows = $m->select('p.id_posts,p.title,p.content,p.state,p.created_at,u.name_users AS author,u.email AS author_email')
-                  ->from('posts p')
-                  ->join('users u','u.id_users=p.user_id', 'left')
-                  ->where('p.state', 1)
-                  ->orderBy('p.created_at','DESC')
-                  ->findAll();
+        $m = new PostModel();
+
+        // base builder con join para autor
+        $builder = $m->select('p.id_posts,p.title,p.content,p.state,p.created_at,u.name_users AS author,u.email AS author_email')
+                     ->from('posts p')
+                     ->join('users u','u.id_users=p.user_id','left');
+
+        // si NO es admin, solo activos
+        if (!$this->isAdmin()) {
+            $builder->where('p.state', 1);
+        }
+
+        $rows = $builder->orderBy('p.created_at', 'DESC')->findAll();
         return $this->response->setJSON($rows);
     }
 
-    /**
-     * Return the properties of a resource object.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function show($id = null)
+    /* -------------------- MIS POSTS -------------------- */
+    public function mine(): ResponseInterface
     {
-        //
+        $uid = $this->userId();
+        if (!$uid) return $this->response->setStatusCode(401)->setJSON(['message'=>'Unauthorized']);
+
+        $m = new PostModel();
+        $rows = $m->select('p.id_posts,p.title,p.content,p.state,p.created_at,u.name_users AS author,u.email AS author_email')
+                  ->from('posts p')
+                  ->join('users u','u.id_users=p.user_id','left')
+                  ->where('p.user_id',$uid)
+                  ->orderBy('p.created_at','DESC')
+                  ->findAll();
+
+        return $this->response->setJSON($rows);
     }
 
-    /**
-     * Return a new resource object, with default properties.
-     *
-     * @return ResponseInterface
-     */
-    public function new()
+    /* -------------------- CREAR -------------------- */
+    public function create(): ResponseInterface
     {
-        //
-    }
-
-    /**
-     * Create a new resource object, from "posted" parameters.
-     *
-     * @return ResponseInterface
-     */
-    public function create()
-    {
-         $uid = $this->userId();
+        $uid = $this->userId();
         if (!$uid) return $this->response->setStatusCode(401)->setJSON(['message'=>'Unauthorized']);
 
         $data = $this->request->getJSON(true) ?? [];
@@ -63,7 +77,7 @@ class PostController extends ResourceController
         $content = trim($data['content'] ?? '');
 
         if ($title === '' || $content === '') {
-            return $this->response->setStatusCode(422)->setJSON(['message' => 'Título y contenido son requeridos.']);
+            return $this->response->setStatusCode(422)->setJSON(['message'=>'Título y contenido son requeridos.']);
         }
 
         $m = new PostModel();
@@ -81,59 +95,59 @@ class PostController extends ResourceController
             return $this->response->setStatusCode(400)->setJSON(['message'=>'No se pudo crear el post']);
         }
 
-        $post = $m->find($m->getInsertID());
+        // devuelve con datos del autor
+        $id = $m->getInsertID();
+        $post = $m->select('p.id_posts,p.title,p.content,p.state,p.created_at,u.name_users AS author,u.email AS author_email')
+                  ->from('posts p')
+                  ->join('users u','u.id_users=p.user_id','left')
+                  ->where('p.id_posts',$id)
+                  ->first();
+
         return $this->response->setJSON($post);
     }
 
-    /**
-     * Return the editable properties of a resource object.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function edit($id = null)
+    /* -------------------- ACTUALIZAR -------------------- */
+    public function update($id = null): ResponseInterface
     {
-        //
-    }
+        if ($id === null) return $this->response->setStatusCode(422)->setJSON(['message'=>'ID requerido']);
+        if (!$this->isAdmin()) return $this->response->setStatusCode(403)->setJSON(['message'=>'Forbidden']);
 
-    /**
-     * Add or update a model resource, from "posted" properties.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function update($id = null)
-    {
-        //
-    }
+        $payload = $this->request->getJSON(true) ?? [];
+        // Solo permitimos estos campos
+        $save = array_intersect_key($payload, array_flip(['title','content','state']));
 
-    /**
-     * Delete the designated resource object from the model.
-     *
-     * @param int|string|null $id
-     *
-     * @return ResponseInterface
-     */
-    public function delete($id = null)
-    {
-        //
-    }
+        if (array_key_exists('state', $save)) {
+            $save['state'] = (int) $save['state'];
+        }
+        if (empty($save)) {
+            return $this->response->setStatusCode(422)->setJSON(['message'=>'No hay campos válidos']);
+        }
 
-
-    private function userId(): ?int {
-        $p = $this->request->user ?? null;
-        return $p['uid'] ?? null;
-    }
-
-    public function mine()
-    {
-        $uid = $this->userId();
-        if (!$uid) return $this->response->setStatusCode(401)->setJSON(['message'=>'Unauthorized']);
+        $save['updated_at'] = date('Y-m-d H:i:s');
 
         $m = new PostModel();
-        $rows = $m->where('user_id', $uid)->orderBy('created_at','DESC')->findAll();
-        return $this->response->setJSON($rows);
+        if (!$m->update($id, $save)) {
+            // suele fallar si falta el campo en allowedFields
+            return $this->response->setStatusCode(400)->setJSON(['message'=>'No se pudo actualizar']);
+        }
+
+        $row = $m->select('p.id_posts,p.title,p.content,p.state,p.created_at,u.name_users AS author,u.email AS author_email')
+                 ->from('posts p')->join('users u','u.id_users=p.user_id','left')
+                 ->where('p.id_posts',$id)->first();
+
+        return $this->response->setJSON($row ?? ['ok'=>true]);
+    }
+
+    /* -------------------- ELIMINAR -------------------- */
+    public function delete($id = null): ResponseInterface
+    {
+        if ($id === null) return $this->response->setStatusCode(422)->setJSON(['message'=>'ID requerido']);
+        if (!$this->isAdmin()) return $this->response->setStatusCode(403)->setJSON(['message'=>'Forbidden']);
+
+        $m = new PostModel();
+        if (!$m->delete($id)) {
+            return $this->response->setStatusCode(400)->setJSON(['message'=>'No se pudo eliminar']);
+        }
+        return $this->response->setJSON(['ok'=>true]);
     }
 }

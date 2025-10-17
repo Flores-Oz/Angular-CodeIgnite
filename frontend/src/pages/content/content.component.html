@@ -5,17 +5,17 @@
     <h1 class="text-2xl font-bold text-gray-800">Publicaciones</h1>
 
     <div class="flex items-center gap-2">
-      <button class="px-3 py-1 border rounded-lg"
+      <button type="button" class="px-3 py-1 border rounded-lg"
               [class.bg-gray-900]="viewMode()==='list'"
               [class.text-white]="viewMode()==='list'"
               (click)="viewMode.set('list')">Lista</button>
 
-      <button class="px-3 py-1 border rounded-lg"
+      <button type="button" class="px-3 py-1 border rounded-lg"
               [class.bg-gray-900]="viewMode()==='grid'"
               [class.text-white]="viewMode()==='grid'"
               (click)="viewMode.set('grid')">Tarjetas</button>
 
-      <button class="px-3 py-1 border rounded-lg"
+      <button type="button" class="px-3 py-1 border rounded-lg"
               [class.bg-gray-900]="viewMode()==='table'"
               [class.text-white]="viewMode()==='table'"
               (click)="viewMode.set('table')">Tabla</button>
@@ -50,43 +50,109 @@
   <!-- SWITCH DE VISTA -->
   <ng-container [ngSwitch]="viewMode()">
 
-    <!-- VISTA LISTA -->
+    <!-- LISTA -->
     <ng-container *ngSwitchCase="'list'">
       <div class="bg-white rounded-lg shadow-md divide-y divide-gray-200">
-        <div *ngFor="let p of posts(); trackBy: trackById" class="p-4 hover:bg-gray-50 transition">
-          <div class="flex items-start justify-between">
-            <h2 class="text-lg font-semibold text-gray-800">{{ p.title }}</h2>
-            <span class="text-xs text-gray-500">{{ p.created_at | date:'short' }}</span>
+        <div *ngFor="let p of visiblePosts(); trackBy: trackById" class="p-4 hover:bg-gray-50 transition">
+          <div class="flex items-start justify-between gap-3">
+            <!-- Título o editor -->
+            <h2 *ngIf="editingId()!==p.id_posts" class="text-lg font-semibold text-gray-800">
+              {{ p.title }}
+              <span class="ml-2 px-2 py-0.5 text-xs rounded-full"
+                    [class.bg-green-100]="p.state===1" [class.text-green-700]="p.state===1"
+                    [class.bg-gray-200]="p.state!==1" [class.text-gray-700]="p.state!==1">
+                {{ p.state===1 ? 'Activo' : 'Inactivo' }}
+              </span>
+            </h2>
+            <input *ngIf="isAdmin() && editingId()===p.id_posts"
+                   [(ngModel)]="editDraft().title" (ngModelChange)="setEditTitle($event)"
+                   class="border rounded px-2 py-1 w-full max-w-lg">
+
+            <!-- Fecha + acciones -->
+            <div class="flex items-center gap-3">
+              <span class="text-xs text-gray-500">{{ p.created_at | date:'short' }}</span>
+
+              <!-- Toggle estado -->
+              <button *ngIf="isAdmin()" type="button"
+                      class="px-2 py-1 border rounded text-xs"
+                      [class.bg-gray-100]="p.state===0"
+                      (click)="toggleState(p)">
+                {{ p.state===1 ? 'Desactivar' : 'Activar' }}
+              </button>
+
+              <!-- Acciones admin -->
+              <ng-container *ngIf="isAdmin()">
+                <button *ngIf="editingId()!==p.id_posts" type="button" class="text-blue-600 hover:underline" (click)="beginEdit(p)">Editar</button>
+                <button *ngIf="editingId()!==p.id_posts" type="button" class="text-red-600 hover:underline" (click)="remove(p)">Eliminar</button>
+                <button *ngIf="editingId()===p.id_posts" type="button" class="text-green-700 hover:underline" (click)="saveEdit(p)">Guardar</button>
+                <button *ngIf="editingId()===p.id_posts" type="button" class="text-gray-600 hover:underline" (click)="cancelEdit()">Cancelar</button>
+              </ng-container>
+            </div>
           </div>
-          <p class="mt-2 text-gray-700 whitespace-pre-line">{{ p.content }}</p>
+
+          <!-- Contenido o editor -->
+          <p *ngIf="editingId()!==p.id_posts" class="mt-2 text-gray-700 whitespace-pre-line">{{ p.content }}</p>
+          <textarea *ngIf="isAdmin() && editingId()===p.id_posts"
+                    [(ngModel)]="editDraft().content" (ngModelChange)="setEditContent($event)"
+                    rows="3" class="mt-2 w-full border rounded p-2"></textarea>
+
           <div class="mt-2 text-xs text-gray-500">
             Autor: {{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span>
           </div>
         </div>
-        <div *ngIf="posts().length===0" class="p-4 text-gray-500 text-center">No hay publicaciones.</div>
+        <div *ngIf="visiblePosts().length===0" class="p-4 text-gray-500 text-center">No hay publicaciones.</div>
       </div>
     </ng-container>
 
-    <!-- VISTA TARJETAS (GRID) -->
+    <!-- GRID -->
     <ng-container *ngSwitchCase="'grid'">
-      <div *ngIf="posts().length===0" class="p-4 text-gray-500 text-center bg-white rounded-lg shadow">No hay publicaciones.</div>
+      <div *ngIf="visiblePosts().length===0" class="p-4 text-gray-500 text-center bg-white rounded-lg shadow">No hay publicaciones.</div>
 
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <article *ngFor="let p of posts(); trackBy: trackById"
+        <article *ngFor="let p of visiblePosts(); trackBy: trackById"
                  class="bg-white rounded-xl shadow hover:shadow-md transition p-4 border border-gray-100">
           <header class="flex items-start justify-between gap-3">
-            <h3 class="font-semibold text-gray-900 line-clamp-2">{{ p.title }}</h3>
+            <h3 *ngIf="editingId()!==p.id_posts" class="font-semibold text-gray-900 line-clamp-2">
+              {{ p.title }}
+              <span class="ml-2 px-2 py-0.5 text-xs rounded-full align-middle"
+                    [class.bg-green-100]="p.state===1" [class.text-green-700]="p.state===1"
+                    [class.bg-gray-200]="p.state!==1" [class.text-gray-700]="p.state!==1">
+                {{ p.state===1 ? 'Activo' : 'Inactivo' }}
+              </span>
+            </h3>
+            <input *ngIf="isAdmin() && editingId()===p.id_posts"
+                   [(ngModel)]="editDraft().title" (ngModelChange)="setEditTitle($event)"
+                   class="border rounded px-2 py-1 w-full">
             <time class="text-xs text-gray-500 shrink-0">{{ p.created_at | date:'short' }}</time>
           </header>
-          <p class="mt-2 text-gray-700 line-clamp-4">{{ p.content }}</p>
-          <footer class="mt-3 text-xs text-gray-500">
-            {{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span>
+
+          <p *ngIf="editingId()!==p.id_posts" class="mt-2 text-gray-700 line-clamp-4">{{ p.content }}</p>
+          <textarea *ngIf="isAdmin() && editingId()===p.id_posts"
+                    [(ngModel)]="editDraft().content" (ngModelChange)="setEditContent($event)"
+                    rows="3" class="mt-2 w-full border rounded p-2"></textarea>
+
+          <footer class="mt-3 text-xs text-gray-500 flex items-center justify-between">
+            <span>{{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span></span>
+
+            <ng-container *ngIf="isAdmin()">
+              <div class="flex gap-2">
+                <button type="button" class="px-2 py-1 border rounded text-xs"
+                        [class.bg-gray-100]="p.state===0"
+                        (click)="toggleState(p)">
+                  {{ p.state===1 ? 'Desactivar' : 'Activar' }}
+                </button>
+                <button *ngIf="editingId()!==p.id_posts" type="button" class="text-blue-600 hover:underline" (click)="beginEdit(p)">Editar</button>
+                <button *ngIf="editingId()!==p.id_posts" type="button" class="text-red-600 hover:underline" (click)="remove(p)">Eliminar</button>
+                <button *ngIf="editingId()===p.id_posts"  type="button" class="text-green-700 hover:underline" (click)="saveEdit(p)">Guardar</button>
+                <button *ngIf="editingId()===p.id_posts"  type="button" class="text-gray-600 hover:underline"  (click)="cancelEdit()">Cancelar</button>
+              </div>
+            </ng-container>
           </footer>
         </article>
       </div>
     </ng-container>
 
-    <!-- VISTA TABLA -->
+    <!-- TABLA -->
     <ng-container *ngSwitchCase="'table'">
       <div class="overflow-auto bg-white rounded-lg shadow">
         <table class="min-w-full text-sm">
@@ -95,23 +161,56 @@
               <th class="text-left font-semibold p-3">Título</th>
               <th class="text-left font-semibold p-3">Autor</th>
               <th class="text-left font-semibold p-3">Fecha</th>
+              <th class="text-left font-semibold p-3">Estado</th>
+              <th class="text-left font-semibold p-3" *ngIf="isAdmin()">Acciones</th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-100">
-            <tr *ngFor="let p of posts(); trackBy: trackById" class="hover:bg-gray-50">
+            <tr *ngFor="let p of visiblePosts(); trackBy: trackById" class="hover:bg-gray-50 align-top">
               <td class="p-3">
-                <div class="font-medium text-gray-900">{{ p.title }}</div>
-                <div class="text-gray-600 line-clamp-2">{{ p.content }}</div>
+                <div *ngIf="editingId()!==p.id_posts" class="font-medium text-gray-900">{{ p.title }}</div>
+                <input *ngIf="isAdmin() && editingId()===p.id_posts"
+                       [(ngModel)]="editDraft().title" (ngModelChange)="setEditTitle($event)"
+                       class="border rounded px-2 py-1 w-full max-w-md">
+
+                <div *ngIf="editingId()!==p.id_posts" class="text-gray-600 line-clamp-2">{{ p.content }}</div>
+                <textarea *ngIf="isAdmin() && editingId()===p.id_posts"
+                          [(ngModel)]="editDraft().content" (ngModelChange)="setEditContent($event)"
+                          rows="3" class="mt-2 w-full border rounded p-2"></textarea>
               </td>
+
               <td class="p-3 text-gray-700">
                 {{ p.author ?? '—' }} <span *ngIf="p.author_email" class="text-gray-500">({{ p.author_email }})</span>
               </td>
-              <td class="p-3 text-gray-600">
-                {{ p.created_at | date:'short' }}
+
+              <td class="p-3 text-gray-600">{{ p.created_at | date:'short' }}</td>
+
+              <td class="p-3">
+                <span class="px-2 py-0.5 rounded-full text-xs"
+                      [class.bg-green-100]="p.state===1" [class.text-green-700]="p.state===1"
+                      [class.bg-gray-200]="p.state!==1" [class.text-gray-700]="p.state!==1">
+                  {{ p.state===1 ? 'Activo' : 'Inactivo' }}
+                </span>
+                <button *ngIf="isAdmin()" type="button"
+                        class="ml-2 px-2 py-1 border rounded text-xs"
+                        [class.bg-gray-100]="p.state===0"
+                        (click)="toggleState(p)">
+                  {{ p.state=== 0 ? 'Desactivar' : 'Activar' }}
+                </button>
+              </td>
+
+              <td class="p-3" *ngIf="isAdmin()">
+                <div class="flex gap-2">
+                  <button *ngIf="editingId()!==p.id_posts" type="button" class="px-2 py-1 border rounded hover:bg-gray-100" (click)="beginEdit(p)">Editar</button>
+                  <button *ngIf="editingId()!==p.id_posts" type="button" class="px-2 py-1 border rounded hover:bg-red-50 text-red-700" (click)="remove(p)">Eliminar</button>
+                  <button *ngIf="editingId()===p.id_posts" type="button" class="px-2 py-1 border rounded bg-green-600 text-white" (click)="saveEdit(p)">Guardar</button>
+                  <button *ngIf="editingId()===p.id_posts" type="button" class="px-2 py-1 border rounded" (click)="cancelEdit()">Cancelar</button>
+                </div>
               </td>
             </tr>
-            <tr *ngIf="posts().length===0">
-              <td colspan="3" class="p-4 text-center text-gray-500">No hay publicaciones.</td>
+
+            <tr *ngIf="visiblePosts().length===0">
+              <td colspan="5" class="p-4 text-center text-gray-500">No hay publicaciones.</td>
             </tr>
           </tbody>
         </table>
@@ -126,12 +225,10 @@
       Página {{ page }} de {{ totalPages }} — {{ total }} registros
     </div>
     <div class="flex gap-2">
-      <button class="px-3 py-1 border rounded-lg hover:bg-gray-100"
-              [disabled]="page===1"
-              (click)="goTo(page-1)">Anterior</button>
-      <button class="px-3 py-1 border rounded-lg hover:bg-gray-100"
-              [disabled]="page===totalPages"
-              (click)="goTo(page+1)">Siguiente</button>
+      <button type="button" class="px-3 py-1 border rounded-lg hover:bg-gray-100"
+              [disabled]="page===1" (click)="goTo(page-1)">Anterior</button>
+      <button type="button" class="px-3 py-1 border rounded-lg hover:bg-gray-100"
+              [disabled]="page===totalPages" (click)="goTo(page+1)">Siguiente</button>
     </div>
   </div>
 

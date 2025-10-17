@@ -8,7 +8,6 @@ export type Post = {
   author?:string; author_email?:string;
 };
 
-// tipo para respuesta paginada (si el backend ya la devuelve)
 export type Paged<T> = {
   data: T[]; page: number; limit: number; total: number; totalPages: number;
 };
@@ -18,11 +17,25 @@ export class PostsService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/posts`;
 
-  // ahora acepta params opcionales y puede devolver Post[] o Paged<Post>
   list(params?: { page?: number; limit?: number }) {
     return this.http.get<Post[] | Paged<Post>>(this.base, { params: params as any });
   }
 
-  mine() { return this.http.get<Post[]>(`${this.base}/mine`); }
-  create(data: {title:string; content:string}) { return this.http.post<Post>(this.base, data); }
+  mine() {
+    return this.http.get<Post[]>(`${this.base}/mine`);
+  }
+
+  create(data: {title:string; content:string}) {
+    return this.http.post<Post>(this.base, data);
+  }
+
+  // 🔹 EDITAR (PUT /api/posts/:id)
+  update(id: number, data: Partial<Pick<Post, 'title' | 'content' | 'state'>>) {
+    return this.http.put<Post>(`${this.base}/${id}`, data);
+  }
+
+  // 🔹 ELIMINAR (DELETE /api/posts/:id)
+  remove(id: number) {
+    return this.http.delete<{ok: true}>(`${this.base}/${id}`);
+  }
 }
