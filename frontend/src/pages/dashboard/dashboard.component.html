@@ -16,13 +16,6 @@
     </div>
 
     <div class="bg-white border rounded-2xl p-4">
-      <div class="text-gray-500 text-sm">Publicaciones</div>
-      <div class="mt-1 text-3xl font-semibold">{{ totalPosts() }}</div>
-      <div class="text-xs text-gray-600 mt-1">Activas: {{ activePosts() }}</div>
-      <a routerLink="/content" class="inline-block mt-3 text-indigo-700 text-sm hover:underline">Ver contenido</a>
-    </div>
-
-    <div class="bg-white border rounded-2xl p-4">
       <div class="text-gray-500 text-sm">Roles activos</div>
       <div class="mt-1 text-3xl font-semibold">{{ activeRoles() }}</div>
       <a routerLink="/admin/roles" class="inline-block mt-3 text-indigo-700 text-sm hover:underline">Administrar roles</a>
@@ -36,6 +29,14 @@
         <a routerLink="/content" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Nueva publicación</a>
       </div>
     </div>
+
+     <div class="bg-white border rounded-2xl p-4">
+    <img
+      src="https://media.giphy.com/media/JIX9t2j0ZTN9S/giphy.gif"
+      alt="Gato animado"
+      class="mx-auto rounded-lg shadow-md w-64 h-32 object-cover"/>
+    </div>
+
   </div>
 
   <!-- Actividad reciente -->
@@ -75,10 +76,6 @@
         <div class="flex items-center justify-between">
           <span>Usuarios activos / totales</span>
           <span class="font-medium">{{ activeUsers() }} / {{ totalUsers() }}</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span>Publicaciones activas / totales</span>
-          <span class="font-medium">{{ activePosts() }} / {{ totalPosts() }}</span>
         </div>
         <div class="flex items-center justify-between">
           <span>Roles activos</span>
