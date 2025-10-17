@@ -1,0 +1,99 @@
+<div class="space-y-6">
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-800">Dashboard</h1>
+    <button class="px-3 py-1.5 rounded-lg border" (click)="loadAll()" [disabled]="loading()">
+      {{ loading() ? 'Actualizando…' : 'Actualizar' }}
+    </button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="bg-white border rounded-2xl p-4">
+      <div class="text-gray-500 text-sm">Usuarios</div>
+      <div class="mt-1 text-3xl font-semibold">{{ totalUsers() }}</div>
+      <div class="text-xs text-gray-600 mt-1">Activos: {{ activeUsers() }}</div>
+      <a routerLink="/admin/users" class="inline-block mt-3 text-indigo-700 text-sm hover:underline">Administrar</a>
+    </div>
+
+    <div class="bg-white border rounded-2xl p-4">
+      <div class="text-gray-500 text-sm">Publicaciones</div>
+      <div class="mt-1 text-3xl font-semibold">{{ totalPosts() }}</div>
+      <div class="text-xs text-gray-600 mt-1">Activas: {{ activePosts() }}</div>
+      <a routerLink="/content" class="inline-block mt-3 text-indigo-700 text-sm hover:underline">Ver contenido</a>
+    </div>
+
+    <div class="bg-white border rounded-2xl p-4">
+      <div class="text-gray-500 text-sm">Roles activos</div>
+      <div class="mt-1 text-3xl font-semibold">{{ activeRoles() }}</div>
+      <a routerLink="/admin/roles" class="inline-block mt-3 text-indigo-700 text-sm hover:underline">Administrar roles</a>
+    </div>
+
+    <div class="bg-white border rounded-2xl p-4">
+      <div class="text-gray-500 text-sm">Acciones rápidas</div>
+      <div class="mt-2 flex flex-wrap gap-2">
+        <a routerLink="/admin/users" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Usuarios</a>
+        <a routerLink="/admin/roles" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Roles</a>
+        <a routerLink="/content" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Nueva publicación</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actividad reciente -->
+  <div class="grid lg:grid-cols-2 gap-4">
+    <div class="bg-white border rounded-2xl p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="font-semibold">Últimas publicaciones</h2>
+        <a routerLink="/content" class="text-indigo-700 text-sm hover:underline">Ver todas</a>
+      </div>
+
+      <div *ngIf="recentPosts().length === 0" class="text-sm text-gray-500">No hay publicaciones.</div>
+
+      <ul class="divide-y" *ngIf="recentPosts().length > 0">
+        <li *ngFor="let p of recentPosts()" class="py-2">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="font-medium text-gray-900 line-clamp-1">{{ p.title }}</div>
+              <div class="text-xs text-gray-500">
+                {{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span>
+              </div>
+            </div>
+            <div class="text-xs text-gray-500 shrink-0">{{ p.created_at | date:'short' }}</div>
+          </div>
+          <div class="text-sm text-gray-700 line-clamp-2 mt-1">{{ p.content }}</div>
+          <span class="inline-block mt-1 px-2 py-0.5 rounded-full text-xs"
+                [class.bg-green-100]="+p.state===1" [class.text-green-700]="+p.state===1"
+                [class.bg-gray-200]="+p.state!==1" [class.text-gray-700]="+p.state!==1">
+            {{ +p.state===1 ? 'Activo' : 'Inactivo' }}
+          </span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="bg-white border rounded-2xl p-4">
+      <h2 class="font-semibold mb-3">Resumen</h2>
+      <div class="space-y-2 text-sm text-gray-700">
+        <div class="flex items-center justify-between">
+          <span>Usuarios activos / totales</span>
+          <span class="font-medium">{{ activeUsers() }} / {{ totalUsers() }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Publicaciones activas / totales</span>
+          <span class="font-medium">{{ activePosts() }} / {{ totalPosts() }}</span>
+        </div>
+        <div class="flex items-center justify-between">
+          <span>Roles activos</span>
+          <span class="font-medium">{{ activeRoles() }}</span>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <h3 class="text-sm font-medium text-gray-500 mb-2">Siguientes pasos</h3>
+        <div class="flex flex-wrap gap-2">
+          <a routerLink="/admin/users" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Gestionar usuarios</a>
+          <a routerLink="/admin/roles" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Gestionar roles</a>
+          <a routerLink="/content" class="px-3 py-1.5 border rounded-lg text-sm hover:bg-gray-50">Crear publicación</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
