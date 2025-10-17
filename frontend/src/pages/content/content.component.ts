@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PostsService, Post } from '../../app/core/posts.service';
 import { AuthService } from '../../app/core/auth.service';
+import Swal from 'sweetalert2';
 
 type PagedResp<T> = { data:T[]; page:number; limit:number; total:number; totalPages:number };
 
@@ -26,8 +27,8 @@ export class ContentComponent {
 
   // DATA
   posts = signal<Post[]>([]);
-  // visible para la vista (usuarios no admin ocultan inactivos)
-  visiblePosts = computed(() => this.isAdmin() ? this.posts() : this.posts().filter(p => p.state === 1));
+  // No admin: oculta inactivos
+  visiblePosts = computed(() => this.isAdmin() ? this.posts() : this.posts().filter(p => p.state == 1));
 
   draft = { title:'', content:'' };
 
@@ -42,11 +43,22 @@ export class ContentComponent {
 
   trackById = (_: number, p: Post) => p.id_posts;
 
-  // --- helpers para signals (evita TS2353 en template) ---
+  // helpers para signals (evita TS2353 en template)
   setEditTitle(v: string){ this.editDraft.update(d => ({ ...d, title:v })); }
   setEditContent(v: string){ this.editDraft.update(d => ({ ...d, content:v })); }
 
-  // --- cargar/paginar ---
+  
+
+  private showErrorAlert(msg: string) {
+  Swal.fire({
+    icon: 'error',
+    title: 'Ocurrió un error',
+    text: msg,
+    confirmButtonText: 'Cerrar',
+  });
+}
+
+  // ------------- cargar/paginar -------------
   private isPaged(res: unknown): res is PagedResp<Post> {
     return !!res && typeof res === 'object' && Array.isArray((res as any).data)
            && 'page' in (res as any) && 'total' in (res as any);
@@ -58,9 +70,7 @@ export class ContentComponent {
     this.api.list({ page, limit: this.limit }).subscribe({
       next: (res: Post[] | PagedResp<Post>) => {
         const raw: Post[] = Array.isArray(res) ? res : (res?.data ?? []);
-        // dedupe
-        const map = new Map<number, Post>();
-        raw.forEach(it => map.set(it.id_posts, it));
+        const map = new Map<number, Post>(); raw.forEach(it => map.set(it.id_posts, it));
         const list = Array.from(map.values());
         this.posts.set(list);
 
@@ -74,7 +84,12 @@ export class ContentComponent {
         }
         this.loading.set(false);
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Error al cargar'); }
+      error: (e) => {
+  this.loading.set(false);
+  const msg = e?.error?.message ?? 'Error al cargar';
+  this.error.set(msg);
+  this.showErrorAlert(msg);
+}
     });
   }
 
@@ -83,28 +98,41 @@ export class ContentComponent {
     this.load(p);
   }
 
-  // --- crear ---
-  create(){
-    const title = this.draft.title.trim();
-    const content = this.draft.content.trim();
-    if (!title || !content) return;
+  // ------------- crear -------------
+  async create() {
+  const title = this.draft.title.trim();
+  const content = this.draft.content.trim();
 
+  if (!title || !content) {
+    await Swal.fire({
+      icon: 'error',
+      title: 'Campos obligatorios',
+      text: 'Debes completar todos los campos antes de continuar.',
+    });
+    return;
+  }
     this.loading.set(true);
     this.error.set(undefined);
     this.ok.set(false);
 
     this.api.create({ title, content }).subscribe({
-      next: () => {
+      next: async () => {
         this.ok.set(true);
         this.loading.set(false);
         this.draft = { title:'', content:'' };
+        await Swal.fire({ icon:'success', title:'Publicado', text:'La publicación fue creada.', timer:1400, showConfirmButton:false });
         this.load(this.page);
       },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Error al publicar'); }
+     error: async (e) => {
+  this.loading.set(false);
+  const msg = e?.error?.message ?? 'Error al publicar';
+  this.error.set(msg);
+  this.showErrorAlert(msg);
+}
     });
   }
 
-  // --- edición / admin ---
+  // ------------- edición / admin -------------
   beginEdit(p: Post){
     if (!this.isAdmin()) return;
     this.editingId.set(p.id_posts);
@@ -116,7 +144,7 @@ export class ContentComponent {
     this.editDraft.set({ title:'', content:'' });
   }
 
-  saveEdit(p: Post){
+  async saveEdit(p: Post){
     if (!this.isAdmin()) return;
     const d = this.editDraft();
     const title = d.title.trim();
@@ -125,29 +153,80 @@ export class ContentComponent {
 
     this.loading.set(true);
     this.api.update(p.id_posts, { title, content }).subscribe({
-      next: () => { this.loading.set(false); this.editingId.set(null); this.load(this.page); },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Error al actualizar'); }
+      next: async () => {
+        this.loading.set(false);
+        this.editingId.set(null);
+        await Swal.fire({ icon:'success', title:'Guardado', timer:1200, showConfirmButton:false });
+        this.load(this.page);
+      },
+      error: async (e) => {
+  this.loading.set(false);
+  const msg = e?.error?.message ?? 'Error al actualizar';
+  this.showErrorAlert(msg);
+}
     });
   }
 
-  remove(p: Post){
+  async remove(p: Post){
     if (!this.isAdmin()) return;
-    if (!confirm('¿Eliminar publicación?')) return;
+    const c = await Swal.fire({
+      icon: 'warning',
+      title: 'Eliminar publicación',
+      html: `¿Seguro que deseas eliminar <b>${p.title}</b>?`,
+      showCancelButton: true,
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!c.isConfirmed) return;
+
     this.loading.set(true);
     this.api.remove(p.id_posts).subscribe({
-      next: () => { this.loading.set(false); this.load(this.page); },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'Error al eliminar'); }
+      next: async () => {
+        this.loading.set(false);
+        await Swal.fire({ icon:'success', title:'Eliminado', timer:1200, showConfirmButton:false });
+        this.load(this.page);
+      },
+     error: async (e) => {
+  this.loading.set(false);
+  const msg = e?.error?.message ?? 'Error al eliminar';
+  this.showErrorAlert(msg);
+}
     });
   }
 
-  // --- activar / desactivar (state 1/0) ---
-  toggleState(p: Post){
+  // ------------- activar / desactivar -------------
+  async toggleState(p: Post){
     if (!this.isAdmin()) return;
-    const newState = p.state === 1 ? 0 : 1;
+    const toInactive = p.state == 1;
+    const c = await Swal.fire({
+      icon: 'question',
+      title: toInactive ? 'Desactivar publicación' : 'Activar publicación',
+      text: toInactive
+        ? 'La publicación dejará de ser visible para usuarios.'
+        : 'La publicación volverá a ser visible.',
+      showCancelButton: true,
+      confirmButtonText: toInactive ? 'Sí, desactivar' : 'Sí, activar',
+      cancelButtonText: 'Cancelar'
+    });
+    if (!c.isConfirmed) return;
+
     this.loading.set(true);
-    this.api.update(p.id_posts, { state: newState as any }).subscribe({
-      next: () => { this.loading.set(false); this.load(this.page); },
-      error: (e) => { this.loading.set(false); this.error.set(e?.error?.message ?? 'No se pudo cambiar el estado'); }
+    this.api.update(p.id_posts, { state: toInactive ? 0 : 1 } as any).subscribe({
+      next: async () => {
+        this.loading.set(false);
+        await Swal.fire({
+          icon:'success',
+          title: toInactive ? 'Desactivada' : 'Activada',
+          timer: 1200,
+          showConfirmButton: false
+        });
+        this.load(this.page);
+      },
+      error: async (e) => {
+  this.loading.set(false);
+  const msg = e?.error?.message ?? 'No se pudo cambiar el estado';
+  this.showErrorAlert(msg);
+}
     });
   }
 }

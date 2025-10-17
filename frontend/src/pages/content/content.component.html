@@ -23,29 +23,35 @@
   </div>
 
   <!-- Formulario crear -->
-  <form (ngSubmit)="create()" class="bg-white shadow-md rounded-lg p-4 mb-6 space-y-3">
+  <form #f="ngForm" (ngSubmit)="create()" class="bg-white p-4 rounded-xl shadow space-y-3">
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Título</label>
-      <input [(ngModel)]="draft.title" name="title" type="text" required
-             class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-             placeholder="Escribe el título" />
+      <label class="block text-sm font-medium">Título</label>
+      <input
+        name="title"
+        [(ngModel)]="draft.title"
+        required
+        class="mt-1 w-full border rounded-lg p-2"
+        placeholder="Escribe el título">
     </div>
+
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">Contenido</label>
-      <textarea [(ngModel)]="draft.content" name="content" rows="3" required
-                class="w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                placeholder="Escribe el contenido"></textarea>
+      <label class="block text-sm font-medium">Contenido</label>
+      <textarea
+        name="content"
+        [(ngModel)]="draft.content"
+        required
+        class="mt-1 w-full border rounded-lg p-2"
+        placeholder="Escribe el contenido"></textarea>
     </div>
-    <div class="flex justify-end gap-2">
-      <button type="submit" [disabled]="loading()"
-              class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
-        <span *ngIf="!loading()">Publicar</span>
-        <span *ngIf="loading()">Publicando...</span>
-      </button>
-    </div>
-    <div *ngIf="ok()" class="text-green-600 text-sm">✅ Publicación creada.</div>
-    <div *ngIf="error()" class="text-red-600 text-sm">❌ {{ error() }}</div>
+
+    <button type="submit"
+            [disabled]="loading() || f.invalid"
+            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
+      Publicar
+    </button>
   </form>
+
+  <br />
 
   <!-- SWITCH DE VISTA -->
   <ng-container [ngSwitch]="viewMode()">
@@ -55,13 +61,14 @@
       <div class="bg-white rounded-lg shadow-md divide-y divide-gray-200">
         <div *ngFor="let p of visiblePosts(); trackBy: trackById" class="p-4 hover:bg-gray-50 transition">
           <div class="flex items-start justify-between gap-3">
+
             <!-- Título o editor -->
             <h2 *ngIf="editingId()!==p.id_posts" class="text-lg font-semibold text-gray-800">
               {{ p.title }}
               <span class="ml-2 px-2 py-0.5 text-xs rounded-full"
-                    [class.bg-green-100]="p.state===1" [class.text-green-700]="p.state===1"
-                    [class.bg-gray-200]="p.state!==1" [class.text-gray-700]="p.state!==1">
-                {{ p.state===1 ? 'Activo' : 'Inactivo' }}
+                    [class.bg-green-100]="p.state==1" [class.text-green-700]="p.state==1"
+                    [class.bg-gray-200]="p.state!=1"  [class.text-gray-700]="p.state!=1">
+                {{ p.state==1 ? 'Activo' : 'Inactivo' }}
               </span>
             </h2>
             <input *ngIf="isAdmin() && editingId()===p.id_posts"
@@ -75,9 +82,9 @@
               <!-- Toggle estado -->
               <button *ngIf="isAdmin()" type="button"
                       class="px-2 py-1 border rounded text-xs"
-                      [class.bg-gray-100]="p.state===0"
+                      [class.bg-gray-100]="p.state==0"
                       (click)="toggleState(p)">
-                {{ p.state===1 ? 'Desactivar' : 'Activar' }}
+                {{ p.state==1 ? 'Desactivar' : 'Activar' }}
               </button>
 
               <!-- Acciones admin -->
@@ -100,13 +107,16 @@
             Autor: {{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span>
           </div>
         </div>
+
         <div *ngIf="visiblePosts().length===0" class="p-4 text-gray-500 text-center">No hay publicaciones.</div>
       </div>
     </ng-container>
 
     <!-- GRID -->
     <ng-container *ngSwitchCase="'grid'">
-      <div *ngIf="visiblePosts().length===0" class="p-4 text-gray-500 text-center bg-white rounded-lg shadow">No hay publicaciones.</div>
+      <div *ngIf="visiblePosts().length===0" class="p-4 text-gray-500 text-center bg-white rounded-lg shadow">
+        No hay publicaciones.
+      </div>
 
       <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <article *ngFor="let p of visiblePosts(); trackBy: trackById"
@@ -115,9 +125,9 @@
             <h3 *ngIf="editingId()!==p.id_posts" class="font-semibold text-gray-900 line-clamp-2">
               {{ p.title }}
               <span class="ml-2 px-2 py-0.5 text-xs rounded-full align-middle"
-                    [class.bg-green-100]="p.state===1" [class.text-green-700]="p.state===1"
-                    [class.bg-gray-200]="p.state!==1" [class.text-gray-700]="p.state!==1">
-                {{ p.state===1 ? 'Activo' : 'Inactivo' }}
+                    [class.bg-green-100]="p.state==1" [class.text-green-700]="p.state==1"
+                    [class.bg-gray-200]="p.state!=1" [class.text-gray-700]="p.state!=1">
+                {{ p.state==1 ? 'Activo' : 'Inactivo' }}
               </span>
             </h3>
             <input *ngIf="isAdmin() && editingId()===p.id_posts"
@@ -137,14 +147,14 @@
             <ng-container *ngIf="isAdmin()">
               <div class="flex gap-2">
                 <button type="button" class="px-2 py-1 border rounded text-xs"
-                        [class.bg-gray-100]="p.state===0"
+                        [class.bg-gray-100]="p.state==0"
                         (click)="toggleState(p)">
-                  {{ p.state===1 ? 'Desactivar' : 'Activar' }}
+                  {{ p.state==1 ? 'Desactivar' : 'Activar' }}
                 </button>
                 <button *ngIf="editingId()!==p.id_posts" type="button" class="text-blue-600 hover:underline" (click)="beginEdit(p)">Editar</button>
                 <button *ngIf="editingId()!==p.id_posts" type="button" class="text-red-600 hover:underline" (click)="remove(p)">Eliminar</button>
-                <button *ngIf="editingId()===p.id_posts"  type="button" class="text-green-700 hover:underline" (click)="saveEdit(p)">Guardar</button>
-                <button *ngIf="editingId()===p.id_posts"  type="button" class="text-gray-600 hover:underline"  (click)="cancelEdit()">Cancelar</button>
+                <button *ngIf="editingId()===p.id_posts" type="button" class="text-green-700 hover:underline" (click)="saveEdit(p)">Guardar</button>
+                <button *ngIf="editingId()===p.id_posts" type="button" class="text-gray-600 hover:underline" (click)="cancelEdit()">Cancelar</button>
               </div>
             </ng-container>
           </footer>
@@ -187,15 +197,15 @@
 
               <td class="p-3">
                 <span class="px-2 py-0.5 rounded-full text-xs"
-                      [class.bg-green-100]="p.state===1" [class.text-green-700]="p.state===1"
-                      [class.bg-gray-200]="p.state!==1" [class.text-gray-700]="p.state!==1">
-                  {{ p.state===1 ? 'Activo' : 'Inactivo' }}
+                      [class.bg-green-100]="p.state==1" [class.text-green-700]="p.state==1"
+                      [class.bg-gray-200]="p.state!=1" [class.text-gray-700]="p.state!=1">
+                  {{ p.state==1 ? 'Activo' : 'Inactivo' }}
                 </span>
                 <button *ngIf="isAdmin()" type="button"
                         class="ml-2 px-2 py-1 border rounded text-xs"
-                        [class.bg-gray-100]="p.state===0"
+                        [class.bg-gray-100]="p.state==0"
                         (click)="toggleState(p)">
-                  {{ p.state=== 0 ? 'Desactivar' : 'Activar' }}
+                  {{ p.state==1 ? 'Desactivar' : 'Activar' }}
                 </button>
               </td>
 
