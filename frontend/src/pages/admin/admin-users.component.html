@@ -1,0 +1,85 @@
+<h2 class="text-xl font-semibold mb-4">Administración de usuarios</h2>
+
+<!-- Crear usuario -->
+<div class="mb-4">
+  <button (click)="toggleCreate()" class="px-3 py-1 rounded-lg border">
+    {{ showCreate() ? 'Cancelar' : 'Nuevo usuario' }}
+  </button>
+</div>
+
+<form *ngIf="showCreate()" #f="ngForm" (ngSubmit)="createUser(f)"
+      class="bg-white rounded-2xl border p-4 mb-6 space-y-3">
+  <div class="grid sm:grid-cols-3 gap-3">
+    <div>
+      <label class="text-sm">Nombre</label>
+      <input [(ngModel)]="draft.name_users" name="name_users" required class="mt-1 w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="text-sm">Email</label>
+      <input [(ngModel)]="draft.email" name="email" required email class="mt-1 w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="text-sm">Password</label>
+      <input type="password" [(ngModel)]="draft.password" name="password" required class="mt-1 w-full border rounded-lg px-3 py-2">
+    </div>
+  </div>
+  <div class="flex justify-end">
+    <button type="submit" [disabled]="f.invalid" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+      Crear
+    </button>
+  </div>
+</form>
+
+<!-- Tabla usuarios -->
+<div class="bg-white rounded-2xl border overflow-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100">
+      <tr>
+        <th class="text-left p-3">Nombre</th>
+        <th class="text-left p-3">Email</th>
+        <th class="text-left p-3">Estado</th>
+        <th class="text-left p-3">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let u of users(); trackBy: trackById" class="border-t">
+        <td class="p-3">
+          <input [(ngModel)]="u.name_users" class="border rounded-lg px-2 py-1 w-48">
+        </td>
+        <td class="p-3">
+          <input [(ngModel)]="u.email" class="border rounded-lg px-2 py-1 w-56">
+        </td>
+        <td class="p-3">
+          <span class="px-2 py-0.5 rounded-full text-xs"
+                [class.bg-green-100]="u.state==1"
+                [class.text-green-700]="u.state==1"
+                [class.bg-gray-200]="u.state!=1"
+                [class.text-gray-700]="u.state!=1">
+            {{ u.state==1 ? 'Activo' : 'Inactivo' }}
+          </span>
+          <button class="ml-2 px-2 py-0.5 border rounded text-xs" (click)="toggleState(u)">
+            {{ u.state==1 ? 'Desactivar' : 'Activar' }}
+          </button>
+        </td>
+        <td class="p-3 flex flex-wrap gap-2">
+          <button (click)="saveUser(u)" class="px-3 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Guardar</button>
+          <button (click)="removeUser(u)" class="px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+          <button (click)="openRoles(u)" class="px-3 py-1 rounded-lg bg-gray-600 text-white hover:bg-gray-700">Roles</button>
+        </td>
+      </tr>
+      <tr *ngIf="users().length===0">
+        <td colspan="4" class="p-4 text-center text-gray-500">No hay usuarios.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal roles -->
+<app-roles-modal
+  *ngIf="rolesModal()"
+  [userName]="currentUser()?.name_users || ''"
+  [availableRoles]="availableRoleNames()"
+  [selected]="selectedRoleNames()"
+  (cancel)="rolesModal.set(false)"
+  (save)="saveUserRoles($event)">
+</app-roles-modal>

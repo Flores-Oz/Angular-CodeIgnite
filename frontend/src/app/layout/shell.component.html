@@ -1,0 +1,52 @@
+<div class="min-h-screen bg-gray-50">
+  <header class="bg-white border-b">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="font-semibold">Panel</div>
+
+      <nav class="flex items-center gap-4">
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="text-indigo-700 font-medium"
+          class="text-sm text-gray-700 hover:text-indigo-600"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >Inicio</a>
+
+        <a
+          routerLink="/content"
+          routerLinkActive="text-indigo-700 font-medium"
+          class="text-sm text-gray-700 hover:text-indigo-600"
+        >Contenido</a>
+
+        <!-- Menú administración -->
+        <ng-container *ngIf="isAdmin()">
+          <a
+            routerLink="/admin"
+            routerLinkActive="text-indigo-700 font-medium"
+            class="text-sm text-gray-700 hover:text-indigo-600"
+            [routerLinkActiveOptions]="{ exact: true }"
+          >Administración</a>
+
+          <!-- accesos directos -->
+          <a
+            routerLink="/admin/users"
+            routerLinkActive="text-indigo-700 font-medium"
+            class="text-sm text-gray-700 hover:text-indigo-600"
+          >Usuarios</a>
+
+          <a
+            routerLink="/admin/roles"
+            routerLinkActive="text-indigo-700 font-medium"
+            class="text-sm text-gray-700 hover:text-indigo-600"
+          >Roles</a>
+        </ng-container>
+
+        <span class="text-sm text-gray-500">{{ email() }}</span>
+        <button (click)="logout()" class="text-sm text-red-600 hover:underline">Salir</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <router-outlet />
+  </main>
+</div>

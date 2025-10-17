@@ -48,4 +48,12 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api'/*, 'filter' => 'cors
 
         $routes->options('(:any)', 'Cors::preflight'); // preflight
     });
+
+        // ---------- ROLES ----------
+    $routes->group('roles', ['filter' => 'jwt'], static function ($routes) {
+        $routes->get('',      'RoleController::index');   // GET /api/roles
+        $routes->post('',     'RoleController::create');  // POST /api/roles
+        $routes->put('(:num)','RoleController::update/$1'); // PUT /api/roles/10
+        $routes->delete('(:num)','RoleController::delete/$1'); // DELETE /api/roles/10
+    });
 });

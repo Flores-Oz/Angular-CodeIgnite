@@ -1,0 +1,57 @@
+<h2 class="text-xl font-semibold mb-4">Administración de roles</h2>
+
+<div class="mb-4">
+  <button (click)="toggleCreate()" class="px-3 py-1 rounded-lg border">
+    {{ showCreate() ? 'Cancelar' : 'Nuevo rol' }}
+  </button>
+</div>
+
+<form *ngIf="showCreate()" #f="ngForm" (ngSubmit)="create(f)" class="bg-white rounded-2xl border p-4 mb-6 space-y-3">
+  <div>
+    <label class="text-sm">Nombre del rol</label>
+    <input [(ngModel)]="draft.name_roles" name="name_roles" required class="mt-1 w-full border rounded-lg px-3 py-2">
+  </div>
+  <div class="flex justify-end">
+    <button type="submit" [disabled]="f.invalid" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">
+      Crear
+    </button>
+  </div>
+</form>
+
+<div class="bg-white rounded-2xl border overflow-auto">
+  <table class="w-full text-sm">
+    <thead class="bg-gray-100">
+      <tr>
+        <th class="text-left p-3">Rol</th>
+        <th class="text-left p-3">Estado</th>
+        <th class="text-left p-3">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let r of roles()" class="border-t">
+        <td class="p-3">
+          <input [(ngModel)]="r.name_roles" class="border rounded-lg px-2 py-1 w-56">
+        </td>
+        <td class="p-3">
+          <span class="px-2 py-0.5 rounded-full text-xs"
+                [class.bg-green-100]="r.state==1"
+                [class.text-green-700]="r.state==1"
+                [class.bg-gray-200]="r.state!=1"
+                [class.text-gray-700]="r.state!=1">
+            {{ r.state==1 ? 'Activo' : 'Inactivo' }}
+          </span>
+          <button class="ml-2 px-2 py-0.5 border rounded text-xs" (click)="toggleState(r)">
+            {{ r.state==1 ? 'Desactivar' : 'Activar' }}
+          </button>
+        </td>
+        <td class="p-3 flex flex-wrap gap-2">
+          <button (click)="save(r)" class="px-3 py-1 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700">Guardar</button>
+          <button (click)="remove(r)" class="px-3 py-1 rounded-lg bg-red-600 text-white hover:bg-red-700">Eliminar</button>
+        </td>
+      </tr>
+      <tr *ngIf="roles().length===0">
+        <td colspan="3" class="p-4 text-center text-gray-500">No hay roles.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -1,35 +1,32 @@
-import { Component, inject } from '@angular/core';
-import { RouterLink, RouterOutlet } from '@angular/router';
+import { Component, inject, computed } from '@angular/core';
+import { Router, RouterLink, RouterOutlet, RouterLinkActive} from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CommonModule } from '@angular/common';
+
 
 @Component({
   standalone: true,
   selector: 'app-shell',
-  imports: [CommonModule, RouterLink, RouterOutlet],   // y esto
-  template: `
-  <div class="min-h-screen bg-gray-50">
-    <header class="bg-white border-b">
-      <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div class="font-semibold">Panel</div>
-        <nav class="flex items-center gap-4">
-          <a routerLink="/dashboard" class="text-sm text-gray-700 hover:text-indigo-600">Inicio</a>
-          <a routerLink="/content" class="text-sm text-gray-700 hover:text-indigo-600">Contenido</a>
-          <a *ngIf="isAdmin()" routerLink="/admin" class="text-sm text-gray-700 hover:text-indigo-600">Administración</a>
-          <span class="text-sm text-gray-500"> {{ email() }} </span>
-          <button (click)="logout()" class="text-sm text-red-600 hover:underline">Salir</button>
-        </nav>
-      </div>
-    </header>
-    <main class="max-w-6xl mx-auto px-4 py-6">
-      <router-outlet />
-    </main>
-  </div>
-  `
+  imports: [CommonModule, RouterLink, RouterLinkActive, RouterOutlet],
+  templateUrl: './shell.component.html'
 })
 export class ShellComponent {
   private auth = inject(AuthService);
-  email = () => this.auth.payload?.email ?? '';
-  isAdmin = () => (this.auth.payload?.roles ?? []).includes('admin');
-  logout(){ this.auth.logout(); location.href = '/login'; }
+  private router = inject(Router);
+
+  // email mostrado en el header
+  email = computed(() => this.auth.payload?.email ?? '');
+
+  // rol ADMIN (case-insensitive)
+  isAdmin = computed(() => {
+    const roles = (this.auth.payload?.roles ?? []).map((r: string) => (r || '').toUpperCase());
+    return roles.includes('ADMIN');
+  });
+
+  logout() {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
+    // Si prefieres forzar recarga limpia:
+    // location.href = '/login';
+  }
 }

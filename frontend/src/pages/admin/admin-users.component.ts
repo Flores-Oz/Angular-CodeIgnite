@@ -1,9 +1,9 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule,  NgForm } from '@angular/forms';
-import { UsersService, User } from '../../app/core/users.service';
+import { FormsModule, NgForm } from '@angular/forms';
 import Swal from 'sweetalert2';
-import { RolesService } from '../../app/core/roles.service';
+import { UsersService, User } from '../..//app/core/users.service';
+import { RolesService } from '../..//app/core/roles.service';
 import { RolesModalComponent } from '../admin/roles-modal.component';
 
 @Component({

@@ -13,19 +13,17 @@ class PostController extends ResourceController
     /* ------------ helpers de auth/roles ------------ */
 
     private function user(): array {
-        // Asegúrate que tu JwtFilter ponga: $request->user = ['uid'=>..,'roles'=>['ADMIN',...], ...]
         return $this->request->user ?? [];
     }
 
     private function userId(): ?int {
         $u = $this->user();
-        // soporta uid o id, por si tu filtro usa otro nombre
         return $u['uid'] ?? ($u['id'] ?? null);
     }
 
     private function isAdmin(): bool {
         $roles = $this->user()['roles'] ?? [];
-        // normaliza y busca 'ADMIN'
+        // normaliza y busca 'admin'
         $upper = array_map('strtoupper', is_array($roles) ? $roles : []);
         return in_array('ADMIN', $upper, true);
     }
@@ -127,7 +125,6 @@ class PostController extends ResourceController
 
         $m = new PostModel();
         if (!$m->update($id, $save)) {
-            // suele fallar si falta el campo en allowedFields
             return $this->response->setStatusCode(400)->setJSON(['message'=>'No se pudo actualizar']);
         }
 
