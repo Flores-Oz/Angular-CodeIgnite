@@ -140,9 +140,10 @@
           <textarea *ngIf="isAdmin() && editingId()===p.id_posts"
                     [(ngModel)]="editDraft().content" (ngModelChange)="setEditContent($event)"
                     rows="3" class="mt-2 w-full border rounded p-2"></textarea>
+          <span class="text-xs mt-2 text-gray-700 line-clamp-4">{{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span></span>
 
           <footer class="mt-3 text-xs text-gray-500 flex items-center justify-between">
-            <span>{{ p.author ?? '—' }} <span *ngIf="p.author_email">({{ p.author_email }})</span></span>
+           
 
             <ng-container *ngIf="isAdmin()">
               <div class="flex gap-2">
